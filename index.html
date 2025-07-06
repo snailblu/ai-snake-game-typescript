@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>뱀 게임</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>뱀 게임</h1>
+        <div class="game-info">
+            <div class="score">점수: <span id="score">0</span></div>
+            <div class="high-score">최고 점수: <span id="highScore">0</span></div>
+        </div>
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        <div class="controls">
+            <p>방향키로 뱀을 조종하세요!</p>
+            <p>스페이스바: 게임 시작/일시정지</p>
+        </div>
+        <div class="game-over" id="gameOver">
+            <h2>게임 종료!</h2>
+            <p>최종 점수: <span id="finalScore">0</span></p>
+            <button onclick="game.restart()">다시 시작</button>
+        </div>
+    </div>
+
+    <script type="module" src="js/snake.js"></script>
+    <script type="module" src="js/food.js"></script>
+    <script type="module" src="js/particles.js"></script>
+    <script type="module" src="js/game.js"></script>
+</body>
+</html>

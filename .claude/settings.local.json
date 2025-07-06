@@ -5,7 +5,8 @@
       "Bash(find:*)",
       "Bash(claude config set --global preferredNotifChannel terminal_bell)",
       "Bash(git commit:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }
