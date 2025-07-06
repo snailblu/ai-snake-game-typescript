@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ㅑ<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -18,6 +18,28 @@
             <p>방향키로 뱀을 조종하세요!</p>
             <p>스페이스바: 게임 시작/일시정지</p>
         </div>
+        <div class="api-settings">
+            <h3>AI 혼잣말 설정</h3>
+            <div class="api-key-section">
+                <label for="apiKey">OpenAI API 키 (선택사항):</label>
+                <input type="password" id="apiKey" placeholder="sk-proj-..." />
+                <button id="saveApiKey">저장</button>
+                <button id="testApiKey">테스트</button>
+                <button id="clearApiKey">삭제</button>
+            </div>
+            <div class="api-status" id="apiStatus">
+                <!-- 테스트 결과가 여기에 표시됩니다 -->
+            </div>
+            <div class="chatter-frequency">
+                <label for="chatterFreq">혼잣말 빈도:</label>
+                <input type="range" id="chatterFreq" min="0" max="100" value="30" />
+                <span id="freqValue">30%</span>
+            </div>
+            <p class="api-info">
+                API 키를 설정하면 AI가 더 다양한 혼잣말을 합니다. 
+                <br>설정하지 않으면 기본 텍스트를 사용합니다.
+            </p>
+        </div>
         <div class="game-over" id="gameOver">
             <h2>게임 종료!</h2>
             <p>최종 점수: <span id="finalScore">0</span></p>
@@ -29,6 +51,8 @@
     <script type="module" src="js/aiSnake.js"></script>
     <script type="module" src="js/food.js"></script>
     <script type="module" src="js/particles.js"></script>
+    <script type="module" src="js/chatter.js"></script>
+    <script type="module" src="js/speechBubble.js"></script>
     <script type="module" src="js/game.js"></script>
 </body>
 </html>

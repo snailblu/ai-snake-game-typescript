@@ -10,6 +10,12 @@ export class AISnake extends Snake {
         this.isAlive = true;
         this.respawnTimer = 0;
         this.respawnDelay = 5000; // 5초
+        
+        // 혼잣말 관련 (AI는 더 자주 말함)
+        this.lastChatterTime = 0;
+        this.chatterInterval = 45000; // 45초마다 혼잣말 (API 사용량 절약)
+        this.lastSituation = 'idle';
+        this.justAte = false;
     }
 
     reset() {
@@ -25,6 +31,48 @@ export class AISnake extends Snake {
         this.moveProgress = 0;
         this.isAlive = true;
         this.respawnTimer = 0;
+        this.lastChatterTime = 0;
+        this.lastSituation = 'idle';
+        this.justAte = false;
+    }
+
+    // AI 전용 혼잣말 타이밍 체크
+    shouldChatter(currentTime, foods, otherSnake, chatter) {
+        // 방금 음식을 먹었으면 즉시 혼잣말
+        if (this.justAte) {
+            this.justAte = false;
+            return { should: true, situation: 'eating' };
+        }
+        
+        // 정기적인 혼잣말 체크 (AI는 더 자주)
+        if (currentTime - this.lastChatterTime < this.chatterInterval) {
+            return { should: false };
+        }
+        
+        // 현재 상황 분석
+        const situation = chatter.analyzeSituation(this, foods, otherSnake);
+        
+        // AI는 상황 변화에 더 민감하게 반응
+        const shouldTalk = situation !== this.lastSituation || 
+                          (currentTime - this.lastChatterTime > this.chatterInterval);
+        
+        if (shouldTalk) {
+            this.lastSituation = situation;
+            this.lastChatterTime = currentTime;
+        }
+        
+        return { should: shouldTalk, situation };
+    }
+
+    // AI 전용 grow (혼잣말 트리거 포함)
+    grow() {
+        const tail = { ...this.body[this.body.length - 1] };
+        tail.renderX = tail.x;
+        tail.renderY = tail.y;
+        tail.prevX = tail.x;
+        tail.prevY = tail.y;
+        this.body.push(tail);
+        this.justAte = true; // 음식을 먹었다는 표시
     }
 
     // AI 업데이트 (자동 이동)

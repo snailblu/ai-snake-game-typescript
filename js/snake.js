@@ -13,6 +13,12 @@ export class Snake {
         this.direction = { x: 1, y: 0 };
         this.nextDirection = { x: 1, y: 0 };
         this.moveProgress = 0; // 이동 애니메이션 진행도 (0-1)
+        
+        // 혼잣말 관련
+        this.lastChatterTime = 0;
+        this.chatterInterval = 30000; // 30초마다 혼잣말 (API 사용량 절약)
+        this.lastSituation = 'idle';
+        this.justAte = false;
     }
 
     move() {
@@ -46,6 +52,7 @@ export class Snake {
         tail.prevX = tail.x;
         tail.prevY = tail.y;
         this.body.push(tail);
+        this.justAte = true; // 음식을 먹었다는 표시
     }
 
     // 보간 함수 (Linear Interpolation)
@@ -67,6 +74,35 @@ export class Snake {
                 segment.renderY = segment.y;
             }
         });
+    }
+
+    // 혼잣말 타이밍 체크
+    shouldChatter(currentTime, foods, otherSnake, chatter, probability = 0.3) {
+        // 방금 음식을 먹었으면 즉시 혼잣말
+        if (this.justAte) {
+            this.justAte = false;
+            return { should: true, situation: 'eating' };
+        }
+        
+        // 정기적인 혼잣말 체크
+        if (currentTime - this.lastChatterTime < this.chatterInterval) {
+            return { should: false };
+        }
+        
+        // 현재 상황 분석
+        const situation = chatter.analyzeSituation(this, foods, otherSnake);
+        
+        // 상황이 바뀌었거나 시간이 충분히 지났을 때 혼잣말 (사용자 설정 확률)
+        const shouldTalk = (situation !== this.lastSituation || 
+                          (currentTime - this.lastChatterTime > this.chatterInterval)) &&
+                          Math.random() < probability;
+        
+        if (shouldTalk) {
+            this.lastSituation = situation;
+            this.lastChatterTime = currentTime;
+        }
+        
+        return { should: shouldTalk, situation };
     }
 
     changeDirection(newDirection) {

@@ -2,6 +2,8 @@ import { Snake } from './snake.js';
 import { AISnake } from './aiSnake.js';
 import { FoodManager } from './food.js';
 import { ParticleSystem } from './particles.js';
+import { Chatter } from './chatter.js';
+import { SpeechBubbleManager } from './speechBubble.js';
 
 class Game {
     constructor() {
@@ -13,6 +15,8 @@ class Game {
         this.aiSnake = new AISnake(this.gridSize);
         this.foodManager = new FoodManager(this.gridSize, 2);
         this.particles = new ParticleSystem();
+        this.chatter = new Chatter();
+        this.speechBubbles = new SpeechBubbleManager();
         
         this.score = 0;
         this.highScore = localStorage.getItem('snakeHighScore') || 0;
@@ -58,6 +62,93 @@ class Game {
                     break;
             }
         });
+        
+        // API 키 설정 이벤트 리스너
+        this.setupApiKeyListeners();
+    }
+
+    setupApiKeyListeners() {
+        const apiKeyInput = document.getElementById('apiKey');
+        const saveButton = document.getElementById('saveApiKey');
+        const testButton = document.getElementById('testApiKey');
+        const clearButton = document.getElementById('clearApiKey');
+        const freqSlider = document.getElementById('chatterFreq');
+        const freqValue = document.getElementById('freqValue');
+        const apiStatus = document.getElementById('apiStatus');
+        
+        // 저장된 API 키 로드 (마스킹하여 표시)
+        const savedKey = localStorage.getItem('openai_api_key');
+        if (savedKey) {
+            apiKeyInput.value = savedKey.substring(0, 10) + '...';
+        }
+        
+        // 저장된 혼잣말 빈도 로드
+        const savedFreq = localStorage.getItem('chatter_frequency') || 30;
+        freqSlider.value = savedFreq;
+        freqValue.textContent = savedFreq + '%';
+        this.chatterProbability = parseFloat(savedFreq) / 100;
+        
+        // 저장 버튼
+        saveButton.addEventListener('click', () => {
+            const key = apiKeyInput.value.trim();
+            if (key && key.length > 10) {
+                this.chatter.setApiKey(key);
+                apiKeyInput.value = key.substring(0, 10) + '...';
+                alert('API 키가 저장되었습니다.');
+            } else {
+                alert('유효한 API 키를 입력해주세요.');
+            }
+        });
+        
+        // 테스트 버튼
+        testButton.addEventListener('click', async () => {
+            const key = apiKeyInput.value.trim();
+            if (!key || key.includes('...')) {
+                apiStatus.className = 'api-status error';
+                apiStatus.textContent = 'API 키를 입력해주세요.';
+                return;
+            }
+
+            // 테스트 중 상태
+            apiStatus.className = 'api-status testing';
+            apiStatus.textContent = 'API 키 테스트 중...';
+            testButton.disabled = true;
+
+            try {
+                const result = await this.chatter.testApiKey(key);
+                apiStatus.className = 'api-status success';
+                apiStatus.textContent = result.message;
+            } catch (error) {
+                apiStatus.className = 'api-status error';
+                apiStatus.textContent = error.message;
+            } finally {
+                testButton.disabled = false;
+            }
+        });
+
+        // 삭제 버튼
+        clearButton.addEventListener('click', () => {
+            this.chatter.setApiKey(null);
+            apiKeyInput.value = '';
+            apiStatus.className = '';
+            apiStatus.textContent = '';
+            alert('API 키가 삭제되었습니다.');
+        });
+        
+        // 입력 필드 클릭 시 전체 선택
+        apiKeyInput.addEventListener('focus', () => {
+            if (apiKeyInput.value.includes('...')) {
+                apiKeyInput.value = '';
+            }
+        });
+        
+        // 혼잣말 빈도 슬라이더
+        freqSlider.addEventListener('input', () => {
+            const value = freqSlider.value;
+            freqValue.textContent = value + '%';
+            this.chatterProbability = parseFloat(value) / 100;
+            localStorage.setItem('chatter_frequency', value);
+        });
     }
 
     toggleGame() {
@@ -91,10 +182,14 @@ class Game {
             this.particles.update();
             this.snake.updateAnimation(animationSpeed);
             this.aiSnake.updateAnimation(animationSpeed);
+            this.speechBubbles.update(deltaTime);
             
             // AI 뱀 업데이트 (게임이 실행 중일 때만)
             if (this.gameRunning) {
                 this.aiSnake.updateAI(currentTime, this.foodManager.foods, this.snake, this.canvas.width, this.canvas.height);
+                
+                // 혼잣말 체크
+                this.checkChatter(currentTime);
             }
             
             this.draw();
@@ -182,6 +277,60 @@ class Game {
         this.foodManager.addNewFood(this.canvas.width, this.canvas.height, this.snake.body);
     }
 
+    // 혼잣말 체크 및 생성
+    async checkChatter(currentTime) {
+        // 플레이어 뱀 혼잣말 체크
+        const playerChatterCheck = this.snake.shouldChatter(
+            currentTime, 
+            this.foodManager.foods, 
+            this.aiSnake, 
+            this.chatter,
+            this.chatterProbability || 0.3
+        );
+        
+        if (playerChatterCheck.should) {
+            try {
+                const response = await this.chatter.generateChatter(playerChatterCheck.situation, false);
+                const head = this.snake.body[0];
+                const bubbleX = head.renderX * this.gridSize + this.gridSize / 2;
+                const bubbleY = head.renderY * this.gridSize;
+                this.speechBubbles.addBubble(bubbleX, bubbleY, response.text, false, response.type);
+            } catch (error) {
+                console.warn('플레이어 뱀 혼잣말 생성 실패:', error);
+            }
+        }
+
+        // AI 뱀 혼잣말 체크 (살아있을 때만)
+        if (this.aiSnake.isAlive) {
+            const aiChatterCheck = this.aiSnake.shouldChatter ? 
+                this.aiSnake.shouldChatter(
+                    currentTime, 
+                    this.foodManager.foods, 
+                    this.snake, 
+                    this.chatter,
+                    this.chatterProbability || 0.3
+                ) : this.snake.shouldChatter(
+                    currentTime, 
+                    this.foodManager.foods, 
+                    this.snake, 
+                    this.chatter,
+                    this.chatterProbability || 0.3
+                );
+            
+            if (aiChatterCheck.should) {
+                try {
+                    const response = await this.chatter.generateChatter(aiChatterCheck.situation, true);
+                    const head = this.aiSnake.body[0];
+                    const bubbleX = head.renderX * this.gridSize + this.gridSize / 2;
+                    const bubbleY = head.renderY * this.gridSize;
+                    this.speechBubbles.addBubble(bubbleX, bubbleY, response.text, true, response.type);
+                } catch (error) {
+                    console.warn('AI 뱀 혼잣말 생성 실패:', error);
+                }
+            }
+        }
+    }
+
     draw() {
         // 배경 그라데이션
         const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
@@ -197,6 +346,7 @@ class Game {
         this.aiSnake.draw(this.ctx);
         this.foodManager.draw(this.ctx);
         this.particles.draw(this.ctx);
+        this.speechBubbles.draw(this.ctx);
     }
 
     drawGrid() {
