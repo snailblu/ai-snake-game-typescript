@@ -1,8 +1,16 @@
 import { GAME_CONSTANTS } from './gameConstants.js';
+import { FoodType, GameSituation, ChatterInterface, SpeechBubbleManagerInterface } from './types.js';
+import { Snake } from './snake.js';
+import { AISnake } from './aiSnake.js';
 
 // 혼잣말 통합 관리 클래스
 export class ChatterManager {
-    constructor(chatter, speechBubbles, gridSize) {
+    private chatter: ChatterInterface;
+    private speechBubbles: SpeechBubbleManagerInterface;
+    private gridSize: number;
+    public chatterProbability: number;
+
+    constructor(chatter: ChatterInterface, speechBubbles: SpeechBubbleManagerInterface, gridSize: number) {
         this.chatter = chatter;
         this.speechBubbles = speechBubbles;
         this.gridSize = gridSize;
@@ -10,12 +18,12 @@ export class ChatterManager {
     }
 
     // 혼잣말 확률 설정
-    setChatterProbability(probability) {
+    setChatterProbability(probability: number): void {
         this.chatterProbability = probability;
     }
 
     // 플레이어 뱀 혼잣말 체크 및 생성
-    async checkPlayerChatter(currentTime, playerSnake, foods, aiSnake) {
+    async checkPlayerChatter(currentTime: number, playerSnake: Snake, foods: FoodType[], aiSnake: AISnake): Promise<void> {
         const chatterCheck = playerSnake.shouldChatter(
             currentTime, 
             foods, 
@@ -25,12 +33,12 @@ export class ChatterManager {
         );
         
         if (chatterCheck.should) {
-            await this.generateChatter(playerSnake, chatterCheck.situation, false);
+            await this.generateChatter(playerSnake, chatterCheck.situation!, false);
         }
     }
 
     // AI 뱀 혼잣말 체크 및 생성
-    async checkAIChatter(currentTime, aiSnake, foods, playerSnake) {
+    async checkAIChatter(currentTime: number, aiSnake: AISnake, foods: FoodType[], playerSnake: Snake): Promise<void> {
         if (!aiSnake.isAlive) return;
         
         // AI 뱀에 shouldChatter 메서드가 있는지 확인
@@ -39,8 +47,7 @@ export class ChatterManager {
                 currentTime, 
                 foods, 
                 playerSnake, 
-                this.chatter,
-                this.chatterProbability
+                this.chatter
             ) : playerSnake.shouldChatter(
                 currentTime, 
                 foods, 
@@ -50,12 +57,12 @@ export class ChatterManager {
             );
         
         if (chatterCheck.should) {
-            await this.generateChatter(aiSnake, chatterCheck.situation, true);
+            await this.generateChatter(aiSnake, chatterCheck.situation!, true);
         }
     }
 
     // 혼잣말 생성 및 말풍선 표시
-    async generateChatter(snake, situation, isAI) {
+    async generateChatter(snake: Snake | AISnake, situation: GameSituation, isAI: boolean): Promise<void> {
         try {
             const response = await this.chatter.generateChatter(situation, isAI);
             const head = snake.body[0];
@@ -70,7 +77,7 @@ export class ChatterManager {
     }
 
     // 전체 혼잣말 체크 (플레이어 + AI)
-    async checkAllChatter(currentTime, playerSnake, aiSnake, foods) {
+    async checkAllChatter(currentTime: number, playerSnake: Snake, aiSnake: AISnake, foods: FoodType[]): Promise<void> {
         // 플레이어 뱀 혼잣말 체크
         await this.checkPlayerChatter(currentTime, playerSnake, foods, aiSnake);
         

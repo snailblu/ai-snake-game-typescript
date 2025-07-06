@@ -1,12 +1,17 @@
 // 프롬프트 및 폴백 메시지 관리 클래스
 export class PromptManager {
+    private prompts: { [key: string]: string };
+    private fallbackTexts: { [key: string]: string[] };
+
     constructor() {
+        this.prompts = {};
+        this.fallbackTexts = {};
         this.initializePrompts();
         this.initializeFallbackTexts();
     }
 
     // 상황별 프롬프트 초기화
-    initializePrompts() {
+    private initializePrompts(): void {
         this.prompts = {
             hunting: "음식을 찾는 상황입니다. 배고픔을 표현하는 인터넷 커뮤니티 스타일 혼잣말을 하세요. 예시: ㅇㄱㄹㅇ배고픔, 먹방가즈아, 간식ㄱㄱ",
             eating: "음식을 먹는 중입니다. 맛있다는 기쁨을 인터넷 밈으로 표현하는 혼잣말을 하세요. 예시: ㅗㅜㅑ맛있어, 개꿀맛ㅋㅋ, 존맛탱",
@@ -20,7 +25,7 @@ export class PromptManager {
     }
 
     // 폴백 텍스트 초기화
-    initializeFallbackTexts() {
+    private initializeFallbackTexts(): void {
         this.fallbackTexts = {
             hunting: [
                 "ㅇㄱㄹㅇ 배고픔", "먹방가즈아", "사과 ㅊㅊ", "배고파죽겠네", "간식 어딨지ㅋ", 
@@ -61,25 +66,25 @@ export class PromptManager {
     }
 
     // 프롬프트 가져오기
-    getPrompt(situation, isAI = false) {
+    getPrompt(situation: string, isAI: boolean = false): string {
         const promptKey = isAI ? `ai_${situation}` : situation;
         return this.prompts[promptKey] || this.prompts.idle;
     }
 
     // 폴백 텍스트 목록 가져오기
-    getFallbackTexts(situation, isAI = false) {
+    getFallbackTexts(situation: string, isAI: boolean = false): string[] {
         const key = isAI ? `ai_${situation}` : situation;
         return this.fallbackTexts[key] || this.fallbackTexts.idle;
     }
 
     // 랜덤 폴백 텍스트 선택
-    getRandomFallbackText(situation, isAI = false) {
+    getRandomFallbackText(situation: string, isAI: boolean = false): string {
         const texts = this.getFallbackTexts(situation, isAI);
         return texts[Math.floor(Math.random() * texts.length)];
     }
 
     // 특정 폴백 텍스트 제외하고 선택
-    getRandomFallbackTextExcluding(situation, excludeTexts = [], isAI = false) {
+    getRandomFallbackTextExcluding(situation: string, excludeTexts: string[] = [], isAI: boolean = false): string {
         const allTexts = this.getFallbackTexts(situation, isAI);
         const availableTexts = allTexts.filter(text => !excludeTexts.includes(text));
         
@@ -90,13 +95,13 @@ export class PromptManager {
     }
 
     // 새 프롬프트 추가
-    addPrompt(key, promptText) {
+    addPrompt(key: string, promptText: string): void {
         this.prompts[key] = promptText;
         console.log(`📝 [프롬프트 추가] ${key}: ${promptText}`);
     }
 
     // 새 폴백 텍스트 추가
-    addFallbackText(situation, newTexts, isAI = false) {
+    addFallbackText(situation: string, newTexts: string | string[], isAI: boolean = false): void {
         const key = isAI ? `ai_${situation}` : situation;
         
         if (!this.fallbackTexts[key]) {
@@ -109,11 +114,11 @@ export class PromptManager {
             this.fallbackTexts[key].push(newTexts);
         }
         
-        console.log(`📝 [폴백 텍스트 추가] ${key}: ${newTexts.length || 1}개 추가`);
+        console.log(`📝 [폴백 텍스트 추가] ${key}: ${Array.isArray(newTexts) ? newTexts.length : 1}개 추가`);
     }
 
     // 프롬프트 업데이트
-    updatePrompt(key, newPromptText) {
+    updatePrompt(key: string, newPromptText: string): boolean {
         if (this.prompts[key]) {
             const oldPrompt = this.prompts[key];
             this.prompts[key] = newPromptText;
@@ -124,8 +129,8 @@ export class PromptManager {
     }
 
     // 사용 가능한 상황 목록 반환
-    getAvailableSituations() {
-        const situations = new Set();
+    getAvailableSituations(): string[] {
+        const situations = new Set<string>();
         
         Object.keys(this.prompts).forEach(key => {
             if (key.startsWith('ai_')) {
@@ -139,18 +144,22 @@ export class PromptManager {
     }
 
     // 특정 상황의 폴백 텍스트 개수 반환
-    getFallbackTextCount(situation, isAI = false) {
+    getFallbackTextCount(situation: string, isAI: boolean = false): number {
         const texts = this.getFallbackTexts(situation, isAI);
         return texts.length;
     }
 
     // 모든 상황의 통계 정보 반환
-    getStats() {
+    getStats(): {
+        totalPrompts: number;
+        totalSituations: number;
+        situationStats: { [key: string]: any };
+    } {
         const situations = this.getAvailableSituations();
         const stats = {
             totalPrompts: Object.keys(this.prompts).length,
             totalSituations: situations.length,
-            situationStats: {}
+            situationStats: {} as { [key: string]: any }
         };
         
         situations.forEach(situation => {
@@ -166,7 +175,7 @@ export class PromptManager {
     }
 
     // 설정을 JSON으로 내보내기
-    exportConfig() {
+    exportConfig(): { prompts: { [key: string]: string }; fallbackTexts: { [key: string]: string[] } } {
         return {
             prompts: { ...this.prompts },
             fallbackTexts: { ...this.fallbackTexts }
@@ -174,7 +183,7 @@ export class PromptManager {
     }
 
     // JSON 설정 가져오기
-    importConfig(config) {
+    importConfig(config: { prompts?: { [key: string]: string }; fallbackTexts?: { [key: string]: string[] } }): void {
         if (config.prompts) {
             this.prompts = { ...config.prompts };
         }
@@ -185,7 +194,7 @@ export class PromptManager {
     }
 
     // 설정 초기화
-    resetToDefaults() {
+    resetToDefaults(): void {
         this.initializePrompts();
         this.initializeFallbackTexts();
         console.log('📝 [설정 초기화] 기본 설정으로 복원됨');

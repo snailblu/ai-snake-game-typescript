@@ -1,18 +1,24 @@
 // 메시지 검증 및 중복 검사 전담 클래스
 export class MessageValidator {
-    constructor(maxRecentMessages = 5, maxRecentFallbacks = 3) {
+    private maxRecentMessages: number;
+    private maxRecentFallbacks: number;
+    
+    // 전역 최근 메시지 추적 (LLM + 폴백 모두 포함)
+    private recentMessages: Map<string, string[]>; // key: 뱀타입, value: 최근 사용한 메시지들
+    
+    // 폴백 메시지 중복 방지
+    private recentFallbacks: Map<string, string[]>; // key: 뱀타입_상황, value: 최근 사용한 메시지들
+
+    constructor(maxRecentMessages: number = 5, maxRecentFallbacks: number = 3) {
         this.maxRecentMessages = maxRecentMessages;
         this.maxRecentFallbacks = maxRecentFallbacks;
         
-        // 전역 최근 메시지 추적 (LLM + 폴백 모두 포함)
-        this.recentMessages = new Map(); // key: 뱀타입, value: 최근 사용한 메시지들
-        
-        // 폴백 메시지 중복 방지
-        this.recentFallbacks = new Map(); // key: 뱀타입_상황, value: 최근 사용한 메시지들
+        this.recentMessages = new Map();
+        this.recentFallbacks = new Map();
     }
 
     // 메시지가 중복인지 확인하고 최근 메시지에 추가
-    checkAndAddRecentMessage(message, isAI = false) {
+    checkAndAddRecentMessage(message: string, isAI: boolean = false): boolean {
         const snakeType = isAI ? 'AI' : '플레이어';
         const recentMessages = this.recentMessages.get(snakeType) || [];
         
@@ -29,7 +35,7 @@ export class MessageValidator {
     }
 
     // 폴백 메시지 중복 검사
-    checkFallbackDuplication(message, situation, isAI = false) {
+    checkFallbackDuplication(message: string, situation: string, isAI: boolean = false): boolean {
         const snakeType = isAI ? 'AI' : '플레이어';
         const fallbackKey = `${snakeType}_${situation}`;
         const recentFallbacks = this.recentFallbacks.get(fallbackKey) || [];
@@ -38,7 +44,7 @@ export class MessageValidator {
     }
 
     // 폴백 메시지를 최근 사용 목록에 추가
-    addRecentFallback(message, situation, isAI = false) {
+    addRecentFallback(message: string, situation: string, isAI: boolean = false): void {
         const snakeType = isAI ? 'AI' : '플레이어';
         const fallbackKey = `${snakeType}_${situation}`;
         const recentFallbacks = this.recentFallbacks.get(fallbackKey) || [];
@@ -48,7 +54,7 @@ export class MessageValidator {
     }
 
     // 사용 가능한 폴백 메시지 필터링
-    filterAvailableFallbacks(allTexts, situation, isAI = false) {
+    filterAvailableFallbacks(allTexts: string[], situation: string, isAI: boolean = false): string[] {
         const snakeType = isAI ? 'AI' : '플레이어';
         const fallbackKey = `${snakeType}_${situation}`;
         
@@ -63,7 +69,7 @@ export class MessageValidator {
     }
 
     // 메시지 검증 (길이, 특수문자 등)
-    validateMessage(message) {
+    validateMessage(message: string): boolean {
         if (!message || typeof message !== 'string') {
             return false;
         }
@@ -84,7 +90,7 @@ export class MessageValidator {
     }
 
     // 스마트 텍스트 자르기 (단어/문장 경계에서 자르기)
-    smartTruncate(text, maxLength = 15) {
+    smartTruncate(text: string, maxLength: number = 15): string {
         if (!text || text.length <= maxLength) {
             return text;
         }
@@ -134,7 +140,7 @@ export class MessageValidator {
     }
 
     // 중복 방지를 위한 메시지 변형
-    createUniqueMessage(baseMessage, attempts = 0) {
+    createUniqueMessage(baseMessage: string, attempts: number = 0): string {
         if (attempts === 0) {
             return baseMessage;
         }
@@ -151,20 +157,25 @@ export class MessageValidator {
     }
 
     // 최근 메시지 목록 반환
-    getRecentMessages(isAI = false) {
+    getRecentMessages(isAI: boolean = false): string[] {
         const snakeType = isAI ? 'AI' : '플레이어';
         return this.recentMessages.get(snakeType) || [];
     }
 
     // 최근 폴백 메시지 목록 반환
-    getRecentFallbacks(situation, isAI = false) {
+    getRecentFallbacks(situation: string, isAI: boolean = false): string[] {
         const snakeType = isAI ? 'AI' : '플레이어';
         const fallbackKey = `${snakeType}_${situation}`;
         return this.recentFallbacks.get(fallbackKey) || [];
     }
 
     // 통계 정보 반환
-    getStats() {
+    getStats(): {
+        recentMessagesCount: number;
+        recentFallbacksCount: number;
+        maxRecentMessages: number;
+        maxRecentFallbacks: number;
+    } {
         return {
             recentMessagesCount: this.recentMessages.size,
             recentFallbacksCount: this.recentFallbacks.size,
@@ -174,19 +185,19 @@ export class MessageValidator {
     }
 
     // 메시지 기록 초기화
-    clearHistory() {
+    clearHistory(): void {
         this.recentMessages.clear();
         this.recentFallbacks.clear();
         console.log('🗑️ [메시지 기록 초기화] 모든 메시지 기록이 제거됨');
     }
 
     // 특정 뱀의 메시지 기록만 초기화
-    clearHistoryForSnake(isAI = false) {
+    clearHistoryForSnake(isAI: boolean = false): void {
         const snakeType = isAI ? 'AI' : '플레이어';
         this.recentMessages.delete(snakeType);
         
         // 해당 뱀의 모든 폴백 기록도 삭제
-        const keysToDelete = [];
+        const keysToDelete: string[] = [];
         for (const key of this.recentFallbacks.keys()) {
             if (key.startsWith(snakeType + '_')) {
                 keysToDelete.push(key);

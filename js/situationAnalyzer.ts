@@ -1,5 +1,11 @@
+import type { SnakeBase } from './types.js';
+
 // 게임 상황 분석 전담 클래스
 export class SituationAnalyzer {
+    private priorityLevels: { [key: string]: string[] };
+    private intervalsByPriority: { [key: string]: number };
+    private thresholds: { [key: string]: number };
+
     constructor() {
         // 상황 우선순위 정의
         this.priorityLevels = {
@@ -26,7 +32,7 @@ export class SituationAnalyzer {
     }
 
     // 상황 분석 (게임 상태를 바탕으로 상황 판단)
-    analyzeSituation(snake, foods, otherSnake = null) {
+    analyzeSituation(snake: SnakeBase, foods: any[], otherSnake: SnakeBase | null = null): string {
         const head = snake.body[0];
         
         // 음식까지의 거리 계산
@@ -71,12 +77,12 @@ export class SituationAnalyzer {
     }
 
     // 맨하탄 거리 계산
-    calculateManhattanDistance(pos1, pos2) {
+    calculateManhattanDistance(pos1: { x: number; y: number }, pos2: { x: number; y: number }): number {
         return Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y);
     }
 
     // 벽까지의 최단 거리 계산
-    calculateWallDistance(head, gridWidth = 20, gridHeight = 20) {
+    calculateWallDistance(head: { x: number; y: number }, gridWidth: number = 20, gridHeight: number = 20): number {
         return Math.min(
             head.x,                    // 왼쪽 벽
             head.y,                    // 위쪽 벽
@@ -86,7 +92,7 @@ export class SituationAnalyzer {
     }
 
     // 자신의 몸체와 가까운지 확인
-    isNearOwnBody(snake) {
+    isNearOwnBody(snake: SnakeBase): boolean {
         const head = snake.body[0];
         return snake.body.slice(1).some(segment => {
             const distance = this.calculateManhattanDistance(head, segment);
@@ -95,7 +101,7 @@ export class SituationAnalyzer {
     }
 
     // 상황별 우선순위 결정
-    getSituationPriority(situation) {
+    getSituationPriority(situation: string): string {
         for (const [priority, situations] of Object.entries(this.priorityLevels)) {
             if (situations.includes(situation)) {
                 return priority;
@@ -105,18 +111,18 @@ export class SituationAnalyzer {
     }
 
     // 우선순위별 요구 간격 반환
-    getRequiredInterval(priority) {
+    getRequiredInterval(priority: string): number {
         return this.intervalsByPriority[priority] || this.intervalsByPriority.low;
     }
 
     // 상황별 요구 간격 계산
-    getRequiredIntervalBySituation(situation) {
+    getRequiredIntervalBySituation(situation: string): number {
         const priority = this.getSituationPriority(situation);
         return this.getRequiredInterval(priority);
     }
 
     // 뱀 주변의 위험도 분석
-    analyzeDangerLevel(snake, otherSnake = null, gridWidth = 20, gridHeight = 20) {
+    analyzeDangerLevel(snake: SnakeBase, otherSnake: SnakeBase | null = null, gridWidth: number = 20, gridHeight: number = 20): number {
         const head = snake.body[0];
         let dangerLevel = 0;
         
@@ -142,7 +148,7 @@ export class SituationAnalyzer {
     }
 
     // 음식에 대한 경쟁 강도 분석
-    analyzeCompetitionLevel(snake, foods, otherSnake) {
+    analyzeCompetitionLevel(snake: SnakeBase, foods: any[], otherSnake: SnakeBase | null): number {
         if (!otherSnake || !otherSnake.isAlive || !foods || foods.length === 0) {
             return 0;
         }
@@ -166,7 +172,7 @@ export class SituationAnalyzer {
     }
 
     // 종합적인 상황 분석 (상세 정보 포함)
-    analyzeDetailedSituation(snake, foods, otherSnake = null) {
+    analyzeDetailedSituation(snake: SnakeBase, foods: any[], otherSnake: SnakeBase | null = null): any {
         const basicSituation = this.analyzeSituation(snake, foods, otherSnake);
         const dangerLevel = this.analyzeDangerLevel(snake, otherSnake);
         const competitionLevel = this.analyzeCompetitionLevel(snake, foods, otherSnake);
@@ -190,7 +196,7 @@ export class SituationAnalyzer {
     }
 
     // 가장 가까운 음식까지의 거리
-    getNearestFoodDistance(head, foods) {
+    getNearestFoodDistance(head: { x: number; y: number }, foods: any[]): number {
         if (!foods || foods.length === 0) return Infinity;
         
         let minDistance = Infinity;
@@ -203,19 +209,23 @@ export class SituationAnalyzer {
     }
 
     // 임계값 설정 업데이트
-    updateThresholds(newThresholds) {
+    updateThresholds(newThresholds: { [key: string]: number }): void {
         this.thresholds = { ...this.thresholds, ...newThresholds };
         console.log('🎯 [임계값 업데이트]', this.thresholds);
     }
 
     // 우선순위별 간격 설정 업데이트
-    updateIntervals(newIntervals) {
+    updateIntervals(newIntervals: { [key: string]: number }): void {
         this.intervalsByPriority = { ...this.intervalsByPriority, ...newIntervals };
         console.log('⏱️ [간격 설정 업데이트]', this.intervalsByPriority);
     }
 
     // 현재 설정 반환
-    getConfig() {
+    getConfig(): {
+        thresholds: { [key: string]: number };
+        intervalsByPriority: { [key: string]: number };
+        priorityLevels: { [key: string]: string[] };
+    } {
         return {
             thresholds: { ...this.thresholds },
             intervalsByPriority: { ...this.intervalsByPriority },
@@ -224,7 +234,7 @@ export class SituationAnalyzer {
     }
 
     // 설정 가져오기
-    setConfig(config) {
+    setConfig(config: any): void {
         if (config.thresholds) {
             this.thresholds = { ...config.thresholds };
         }

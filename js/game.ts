@@ -1,22 +1,38 @@
-import { Snake } from './snake.js';
-import { AISnake } from './aiSnake.js';
-import { FoodManager } from './food.js';
-import { ParticleSystem } from './particles.js';
-import { Chatter } from './chatter.js';
-import { SpeechBubbleManager } from './speechBubble.js';
-import { ApiKeyManager } from './apiKeyManager.js';
-import { GAME_CONSTANTS } from './gameConstants.js';
-import { GameStateManager } from './gameStateManager.js';
-import { CollisionDetector } from './collisionDetector.js';
-import { ChatterManager } from './chatterManager.js';
+import { Snake } from './snake.ts';
+import { AISnake } from './aiSnake.ts';
+import { FoodManager, Food } from './food.ts';
+import { ParticleSystem } from './particles.ts';
+import { Chatter } from './chatter.ts';
+import { SpeechBubbleManager } from './speechBubble.ts';
+import { ApiKeyManager } from './apiKeyManager.ts';
+import { GAME_CONSTANTS, GAME_SETTINGS } from './gameConstants.ts';
+import { GameStateManager } from './gameStateManager.ts';
+import { CollisionDetector } from './collisionDetector.ts';
+import { ChatterManager } from './chatterManager.ts';
+import { GameState } from './types.js';
 
 class Game {
+    public canvas: HTMLCanvasElement;
+    public ctx: CanvasRenderingContext2D;
+    public gridSize: number;
+    
+    public snake: Snake;
+    public aiSnake: AISnake;
+    public foodManager: FoodManager;
+    public particles: ParticleSystem;
+    public chatter: Chatter;
+    public speechBubbles: SpeechBubbleManager;
+    public apiKeyManager: ApiKeyManager;
+    
+    public stateManager: GameStateManager;
+    public collisionDetector: CollisionDetector;
+    public chatterManager: ChatterManager;
+
     constructor() {
-        this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d');
+        this.canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
+        this.ctx = this.canvas.getContext('2d') as CanvasRenderingContext2D;
         this.gridSize = GAME_CONSTANTS.GRID_SIZE;
         
-        // 게임 객체 초기화
         this.snake = new Snake(this.gridSize);
         this.aiSnake = new AISnake(this.gridSize);
         this.foodManager = new FoodManager(this.gridSize, GAME_CONSTANTS.FOOD_COUNT);
@@ -25,7 +41,6 @@ class Game {
         this.speechBubbles = new SpeechBubbleManager();
         this.apiKeyManager = new ApiKeyManager(this.chatter);
         
-        // 관리자 객체 초기화
         this.stateManager = new GameStateManager();
         this.collisionDetector = new CollisionDetector();
         this.chatterManager = new ChatterManager(this.chatter, this.speechBubbles, this.gridSize);
@@ -36,8 +51,8 @@ class Game {
         this.draw();
     }
 
-    setupEventListeners() {
-        document.addEventListener('keydown', (e) => {
+    setupEventListeners(): void {
+        document.addEventListener('keydown', (e: KeyboardEvent) => {
             if (e.code === 'Space') {
                 e.preventDefault();
                 this.toggleGame();
@@ -67,46 +82,41 @@ class Game {
         });
     }
 
-
-    toggleGame() {
+    toggleGame(): void {
         this.stateManager.toggleGame(() => this.update());
     }
 
-    start() {
+    start(): void {
         this.stateManager.start(() => this.update());
     }
 
-    pause() {
+    pause(): void {
         this.stateManager.pause();
     }
 
-    startRenderLoop() {
-        this.stateManager.startRenderLoop((currentTime, deltaTime, animationSpeed) => {
+    startRenderLoop(): void {
+        this.stateManager.startRenderLoop((currentTime: number, deltaTime: number, animationSpeed: number) => {
             this.particles.update();
             this.snake.updateAnimation(animationSpeed);
             this.aiSnake.updateAnimation(animationSpeed);
             this.speechBubbles.update(deltaTime);
             
-            // AI 뱀 업데이트 (게임이 실행 중일 때만)
             if (this.stateManager.isRunning()) {
-                this.aiSnake.updateAI(currentTime, this.foodManager.foods, this.snake, this.canvas.width, this.canvas.height);
-                
-                // 혼잣말 체크
-                this.chatterManager.checkAllChatter(currentTime, this.snake, this.aiSnake, this.foodManager.foods);
+                this.aiSnake.updateAI(currentTime, this.foodManager.foods as any, this.snake, this.canvas.width, this.canvas.height);
+                this.chatterManager.checkAllChatter(currentTime, this.snake, this.aiSnake, this.foodManager.foods as any);
             }
             
             this.draw();
         });
     }
 
-    stopRenderLoop() {
+    stopRenderLoop(): void {
         this.stateManager.stopRenderLoop();
     }
 
-    update() {
+    update(): void {
         this.snake.move();
         
-        // 플레이어 뱀 충돌 검사
         const playerCollisions = this.collisionDetector.checkPlayerCollisions(
             this.snake, this.aiSnake, this.canvas.width, this.canvas.height
         );
@@ -115,13 +125,11 @@ class Game {
             return;
         }
         
-        // AI 뱀 충돌 검사
         const aiCollisions = this.collisionDetector.checkAICollisions(
             this.aiSnake, this.snake, this.canvas.width, this.canvas.height
         );
         if (this.collisionDetector.hasAnyCollision(aiCollisions)) {
             this.aiSnake.die();
-            // AI 뱀 사망 파티클 효과
             this.particles.createFoodParticles(
                 this.aiSnake.body[0].x, 
                 this.aiSnake.body[0].y, 
@@ -129,13 +137,11 @@ class Game {
             );
         }
         
-        // 플레이어 뱀 음식 충돌
         const playerEatenFood = this.foodManager.checkCollision(this.snake);
         if (playerEatenFood) {
             this.handlePlayerFoodEaten(playerEatenFood);
         }
         
-        // AI 뱀 음식 충돌
         if (this.aiSnake.isAlive) {
             const aiEatenFood = this.foodManager.checkCollision(this.aiSnake);
             if (aiEatenFood) {
@@ -144,46 +150,36 @@ class Game {
         }
     }
 
-
-    // 플레이어 뱀 음식 섭취 처리
-    handlePlayerFoodEaten(eatenFood) {
-        // 파티클 효과 생성
+    handlePlayerFoodEaten(eatenFood: Food): void {
         this.particles.createFoodParticles(eatenFood.x, eatenFood.y, this.gridSize);
         this.particles.createScoreParticles(
             eatenFood.x * this.gridSize + this.gridSize / 2,
             eatenFood.y * this.gridSize,
-            GAME_CONSTANTS.SCORE_PER_FOOD
+            GAME_SETTINGS.SCORE_PER_FOOD
         );
         
         this.snake.grow();
         this.stateManager.addScore();
         
-        // 먹은 과일 제거하고 새 과일 추가
         this.foodManager.removeFood(eatenFood);
         this.foodManager.addNewFood(this.canvas.width, this.canvas.height, this.snake.body);
     }
 
-    // AI 뱀 음식 섭취 처리
-    handleAIFoodEaten(eatenFood) {
-        // 파티클 효과 생성
+    handleAIFoodEaten(eatenFood: Food): void {
         this.particles.createFoodParticles(eatenFood.x, eatenFood.y, this.gridSize);
         this.aiSnake.grow();
         
-        // 먹은 과일 제거하고 새 과일 추가
         this.foodManager.removeFood(eatenFood);
         this.foodManager.addNewFood(this.canvas.width, this.canvas.height, this.snake.body);
     }
 
-
-    draw() {
-        // 배경 그라데이션
+    draw(): void {
         const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-        gradient.addColorStop(0, GAME_CONSTANTS.COLORS.BACKGROUND.START);
-        gradient.addColorStop(1, GAME_CONSTANTS.COLORS.BACKGROUND.END);
+        gradient.addColorStop(0, GAME_SETTINGS.COLORS.BACKGROUND.START);
+        gradient.addColorStop(1, GAME_SETTINGS.COLORS.BACKGROUND.END);
         this.ctx.fillStyle = gradient;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // 격자 패턴 그리기
         this.drawGrid();
         
         this.snake.draw(this.ctx);
@@ -193,11 +189,10 @@ class Game {
         this.speechBubbles.draw(this.ctx);
     }
 
-    drawGrid() {
-        this.ctx.strokeStyle = GAME_CONSTANTS.COLORS.GRID;
+    drawGrid(): void {
+        this.ctx.strokeStyle = GAME_SETTINGS.COLORS.GRID;
         this.ctx.lineWidth = 1;
         
-        // 세로 선
         for (let x = 0; x <= this.canvas.width; x += this.gridSize) {
             this.ctx.beginPath();
             this.ctx.moveTo(x, 0);
@@ -205,7 +200,6 @@ class Game {
             this.ctx.stroke();
         }
         
-        // 가로 선
         for (let y = 0; y <= this.canvas.height; y += this.gridSize) {
             this.ctx.beginPath();
             this.ctx.moveTo(0, y);
@@ -214,12 +208,11 @@ class Game {
         }
     }
 
-
-    gameOver() {
+    gameOver(): void {
         this.stateManager.gameOver();
     }
 
-    restart() {
+    restart(): void {
         this.stateManager.restart();
         this.snake.reset();
         this.aiSnake.reset();
@@ -229,4 +222,4 @@ class Game {
 }
 
 const game = new Game();
-window.game = game;
+(window as any).game = game;

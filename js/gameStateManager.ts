@@ -1,10 +1,17 @@
-import { GAME_CONSTANTS } from './gameConstants.js';
+import { GAME_CONSTANTS } from './gameConstants.ts';
 
 // 게임 상태 관리 클래스
 export class GameStateManager {
+    public score: number;
+    public highScore: number;
+    public gameRunning: boolean;
+    public gameLoop: NodeJS.Timeout | null;
+    public renderLoop: number | null;
+    public lastTime: number;
+
     constructor() {
         this.score = 0;
-        this.highScore = localStorage.getItem(GAME_CONSTANTS.STORAGE_KEYS.HIGH_SCORE) || 0;
+        this.highScore = parseInt(localStorage.getItem(GAME_CONSTANTS.STORAGE_KEYS.HIGH_SCORE) || '0');
         this.gameRunning = false;
         this.gameLoop = null;
         this.renderLoop = null;
@@ -15,7 +22,7 @@ export class GameStateManager {
     }
 
     // 게임 시작
-    start(updateCallback) {
+    start(updateCallback: () => void): void {
         this.gameRunning = true;
         this.gameLoop = setInterval(() => {
             updateCallback();
@@ -23,7 +30,7 @@ export class GameStateManager {
     }
 
     // 게임 일시정지
-    pause() {
+    pause(): void {
         this.gameRunning = false;
         if (this.gameLoop) {
             clearInterval(this.gameLoop);
@@ -32,7 +39,7 @@ export class GameStateManager {
     }
 
     // 게임 토글
-    toggleGame(updateCallback) {
+    toggleGame(updateCallback: () => void): void {
         if (this.gameRunning) {
             this.pause();
         } else {
@@ -41,8 +48,8 @@ export class GameStateManager {
     }
 
     // 렌더링 루프 시작
-    startRenderLoop(renderCallback) {
-        const render = (currentTime) => {
+    startRenderLoop(renderCallback: (currentTime: number, deltaTime: number, animationSpeed: number) => void): void {
+        const render = (currentTime: number) => {
             const deltaTime = currentTime - this.lastTime;
             this.lastTime = currentTime;
             
@@ -59,7 +66,7 @@ export class GameStateManager {
     }
 
     // 렌더링 루프 정지
-    stopRenderLoop() {
+    stopRenderLoop(): void {
         if (this.renderLoop) {
             cancelAnimationFrame(this.renderLoop);
             this.renderLoop = null;
@@ -67,34 +74,34 @@ export class GameStateManager {
     }
 
     // 점수 추가
-    addScore(points = GAME_CONSTANTS.SCORE_PER_FOOD) {
+    addScore(points: number = GAME_CONSTANTS.SCORE_PER_FOOD): void {
         this.score += points;
         this.updateScore();
     }
 
     // 점수 업데이트
-    updateScore() {
+    updateScore(): void {
         const scoreElement = document.getElementById('score');
         if (scoreElement) {
-            scoreElement.textContent = this.score;
+            scoreElement.textContent = this.score.toString();
         }
     }
 
     // 최고 점수 업데이트
-    updateHighScore() {
+    updateHighScore(): void {
         const highScoreElement = document.getElementById('highScore');
         if (highScoreElement) {
-            highScoreElement.textContent = this.highScore;
+            highScoreElement.textContent = this.highScore.toString();
         }
     }
 
     // 게임 오버 처리
-    gameOver() {
+    gameOver(): void {
         this.pause();
         
         if (this.score > this.highScore) {
             this.highScore = this.score;
-            localStorage.setItem(GAME_CONSTANTS.STORAGE_KEYS.HIGH_SCORE, this.highScore);
+            localStorage.setItem(GAME_CONSTANTS.STORAGE_KEYS.HIGH_SCORE, this.highScore.toString());
             this.updateHighScore();
         }
         
@@ -102,7 +109,7 @@ export class GameStateManager {
         const gameOverElement = document.getElementById('gameOver');
         
         if (finalScoreElement) {
-            finalScoreElement.textContent = this.score;
+            finalScoreElement.textContent = this.score.toString();
         }
         if (gameOverElement) {
             gameOverElement.style.display = 'block';
@@ -110,7 +117,7 @@ export class GameStateManager {
     }
 
     // 게임 재시작
-    restart() {
+    restart(): void {
         const gameOverElement = document.getElementById('gameOver');
         if (gameOverElement) {
             gameOverElement.style.display = 'none';
@@ -122,17 +129,17 @@ export class GameStateManager {
     }
 
     // 게임 실행 상태 확인
-    isRunning() {
+    isRunning(): boolean {
         return this.gameRunning;
     }
 
     // 현재 점수 반환
-    getScore() {
+    getScore(): number {
         return this.score;
     }
 
     // 최고 점수 반환
-    getHighScore() {
+    getHighScore(): number {
         return this.highScore;
     }
 }

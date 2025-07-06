@@ -1,12 +1,15 @@
 // 캐싱 로직 전담 클래스
 export class CacheManager {
-    constructor(maxCacheSize = 50) {
+    private cache: Map<string, any>;
+    private maxCacheSize: number;
+
+    constructor(maxCacheSize: number = 50) {
         this.cache = new Map();
         this.maxCacheSize = maxCacheSize;
     }
 
     // 캐시 키 생성
-    generateCacheKey(situation, isAI, contextHash) {
+    generateCacheKey(situation: string, isAI: boolean, contextHash: number): string {
         const promptKey = isAI ? `ai_${situation}` : situation;
         const cacheTimeWindow = this.getCacheTimeWindow(situation);
         const currentTime = Date.now();
@@ -16,7 +19,7 @@ export class CacheManager {
     }
 
     // 컨텍스트 해시 생성
-    generateContextHash(situation, isAI) {
+    generateContextHash(situation: string, isAI: boolean): number {
         const currentTime = Date.now();
         const randomSeed = Math.floor(currentTime / 15000); // 15초마다 변경
         const situationWeight = situation.length * 7;
@@ -26,7 +29,7 @@ export class CacheManager {
     }
 
     // 상황별 캐시 시간 윈도우 계산
-    getCacheTimeWindow(situation) {
+    private getCacheTimeWindow(situation: string): number {
         const highPriority = ['eating', 'danger'];
         const mediumPriority = ['competitive', 'hunting'];
         
@@ -40,7 +43,7 @@ export class CacheManager {
     }
 
     // 캐시에서 데이터 가져오기
-    get(situation, isAI) {
+    get(situation: string, isAI: boolean): any {
         const contextHash = this.generateContextHash(situation, isAI);
         const cacheKey = this.generateCacheKey(situation, isAI, contextHash);
         
@@ -48,7 +51,7 @@ export class CacheManager {
     }
 
     // 캐시에 데이터 저장
-    set(situation, isAI, value) {
+    set(situation: string, isAI: boolean, value: any): string {
         const contextHash = this.generateContextHash(situation, isAI);
         const cacheKey = this.generateCacheKey(situation, isAI, contextHash);
         
@@ -61,12 +64,12 @@ export class CacheManager {
     }
 
     // 특정 캐시 키 삭제
-    delete(cacheKey) {
+    delete(cacheKey: string): boolean {
         return this.cache.delete(cacheKey);
     }
 
     // 캐시에 키가 존재하는지 확인
-    has(situation, isAI) {
+    has(situation: string, isAI: boolean): boolean {
         const contextHash = this.generateContextHash(situation, isAI);
         const cacheKey = this.generateCacheKey(situation, isAI, contextHash);
         
@@ -74,7 +77,7 @@ export class CacheManager {
     }
 
     // 캐시 크기 관리
-    manageCacheSize() {
+    private manageCacheSize(): void {
         while (this.cache.size > this.maxCacheSize) {
             // 가장 오래된 항목 제거 (FIFO)
             const firstKey = this.cache.keys().next().value;
@@ -83,9 +86,9 @@ export class CacheManager {
     }
 
     // 만료된 캐시 정리
-    cleanExpiredCache() {
+    cleanExpiredCache(): void {
         const currentTime = Date.now();
-        const keysToDelete = [];
+        const keysToDelete: string[] = [];
         
         for (const [key, value] of this.cache.entries()) {
             // 캐시 키에서 시간 정보 추출
@@ -111,13 +114,18 @@ export class CacheManager {
     }
 
     // 전체 캐시 초기화
-    clear() {
+    clear(): void {
         this.cache.clear();
         console.log('🗑️ [캐시 전체 삭제] 모든 캐시 항목이 제거됨');
     }
 
     // 캐시 상태 정보
-    getStats() {
+    getStats(): {
+        size: number;
+        maxSize: number;
+        keys: string[];
+        usage: number;
+    } {
         return {
             size: this.cache.size,
             maxSize: this.maxCacheSize,
@@ -127,7 +135,7 @@ export class CacheManager {
     }
 
     // 특정 상황의 캐시 항목 개수
-    countBySituation(situation) {
+    countBySituation(situation: string): number {
         let count = 0;
         for (const key of this.cache.keys()) {
             if (key.includes(situation)) {
@@ -138,7 +146,7 @@ export class CacheManager {
     }
 
     // 정기적인 캐시 정리를 위한 타이머 설정
-    startPeriodicCleanup(intervalMs = 300000) { // 5분마다
+    startPeriodicCleanup(intervalMs: number = 300000): void { // 5분마다
         setInterval(() => {
             this.cleanExpiredCache();
         }, intervalMs);

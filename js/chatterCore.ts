@@ -3,9 +3,17 @@ import { CacheManager } from './cacheManager.js';
 import { MessageValidator } from './messageValidator.js';
 import { PromptManager } from './promptManager.js';
 import { SituationAnalyzer } from './situationAnalyzer.js';
+import type { SnakeBase } from './types.js';
 
 // 리팩토링된 Chatter 시스템의 코어 클래스
 export class ChatterCore {
+    private apiClient: ApiClient;
+    private cacheManager: CacheManager;
+    private messageValidator: MessageValidator;
+    private promptManager: PromptManager;
+    private situationAnalyzer: SituationAnalyzer;
+    private debugMode: boolean = false;
+
     constructor() {
         // 각 기능별 전담 클래스들 초기화
         this.apiClient = new ApiClient();
@@ -21,7 +29,7 @@ export class ChatterCore {
     }
 
     // 메인 혼잣말 생성 함수 (기존 Chatter.generateChatter와 호환)
-    async generateChatter(situation, isAI = false) {
+    async generateChatter(situation: string, isAI: boolean = false): Promise<{ text: string; type: string }> {
         // AI 뱀은 항상 폴백 메시지만 사용
         if (isAI) {
             return this.getFallbackTextWithType(situation, isAI);
@@ -90,13 +98,13 @@ export class ChatterCore {
     }
 
     // 폴백 텍스트 가져오기 (타입 정보 포함)
-    getFallbackTextWithType(situation, isAI = false) {
+    private getFallbackTextWithType(situation: string, isAI: boolean = false): { text: string; type: string } {
         const text = this.getFallbackText(situation, isAI);
         return { text: text, type: 'fallback' };
     }
 
     // 폴백 텍스트 가져오기 (중복 방지 로직 포함)
-    getFallbackText(situation, isAI = false) {
+    private getFallbackText(situation: string, isAI: boolean = false): string {
         const snakeType = isAI ? 'AI' : '플레이어';
         const allTexts = this.promptManager.getFallbackTexts(situation, isAI);
         
@@ -129,32 +137,32 @@ export class ChatterCore {
     }
 
     // 상황 분석 (기존 Chatter.analyzeSituation와 호환)
-    analyzeSituation(snake, foods, otherSnake = null) {
+    analyzeSituation(snake: SnakeBase, foods: any[], otherSnake: SnakeBase | null = null): string {
         return this.situationAnalyzer.analyzeSituation(snake, foods, otherSnake);
     }
 
     // API 키 설정 (기존 Chatter.setApiKey와 호환)
-    setApiKey(key) {
+    setApiKey(key: string): void {
         this.apiClient.setApiKey(key);
     }
 
     // API 키 유효성 검사 (기존 Chatter.isApiKeyValid와 호환)
-    isApiKeyValid() {
+    isApiKeyValid(): boolean {
         return this.apiClient.isApiKeyValid();
     }
 
     // 캐시 정리 (기존 Chatter.clearCache와 호환)
-    clearCache() {
+    clearCache(): void {
         this.cacheManager.clear();
     }
 
     // 메시지 기록 초기화
-    clearMessageHistory() {
+    clearMessageHistory(): void {
         this.messageValidator.clearHistory();
     }
 
     // 시스템 상태 정보 반환
-    getSystemStatus() {
+    getSystemStatus(): any {
         return {
             api: this.apiClient.getStatus(),
             cache: this.cacheManager.getStats(),
@@ -165,7 +173,7 @@ export class ChatterCore {
     }
 
     // 설정 내보내기
-    exportSettings() {
+    exportSettings(): any {
         return {
             prompts: this.promptManager.exportConfig(),
             analyzer: this.situationAnalyzer.getConfig(),
@@ -174,7 +182,7 @@ export class ChatterCore {
     }
 
     // 설정 가져오기
-    importSettings(settings) {
+    importSettings(settings: any): void {
         if (settings.prompts) {
             this.promptManager.importConfig(settings.prompts);
         }
@@ -185,7 +193,7 @@ export class ChatterCore {
     }
 
     // 시스템 재시작
-    restart() {
+    restart(): void {
         this.clearCache();
         this.clearMessageHistory();
         this.apiClient.resetErrorCount();
@@ -193,18 +201,18 @@ export class ChatterCore {
     }
 
     // 디버그 모드용 상세 로깅
-    enableDebugMode() {
+    enableDebugMode(): void {
         this.debugMode = true;
         console.log('🔍 [디버그 모드] 활성화됨');
     }
 
-    disableDebugMode() {
+    disableDebugMode(): void {
         this.debugMode = false;
         console.log('🔍 [디버그 모드] 비활성화됨');
     }
 
     // 성능 통계
-    getPerformanceStats() {
+    getPerformanceStats(): any {
         const cacheStats = this.cacheManager.getStats();
         const validatorStats = this.messageValidator.getStats();
         const apiStatus = this.apiClient.getStatus();

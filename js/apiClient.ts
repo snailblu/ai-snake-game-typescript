@@ -1,11 +1,21 @@
 // OpenAI API 호출 전담 클래스
 export class ApiClient {
+    private apiEndpoint: string;
+    private apiKey: string | null;
+    public lastRequestTime: number;
+    
+    // 오류 추적 및 API 중단 관리
+    private errorCount: number;
+    private maxErrors: number;
+    private apiDisabled: boolean;
+    private apiDisabledUntil: number;
+    private disableDuration: number;
+
     constructor() {
         this.apiEndpoint = 'https://api.openai.com/v1/chat/completions';
         this.apiKey = null;
         this.lastRequestTime = 0;
         
-        // 오류 추적 및 API 중단 관리
         this.errorCount = 0;
         this.maxErrors = 3;
         this.apiDisabled = false;
@@ -16,7 +26,7 @@ export class ApiClient {
     }
 
     // 로컬 스토리지에서 API 키 로드
-    loadApiKey() {
+    private loadApiKey(): void {
         try {
             const storedKey = localStorage.getItem('openai_api_key');
             if (storedKey) {
@@ -28,7 +38,7 @@ export class ApiClient {
     }
 
     // API 키 설정 및 저장
-    setApiKey(key) {
+    setApiKey(key: string | null): void {
         this.apiKey = key;
         try {
             if (key) {
@@ -42,12 +52,12 @@ export class ApiClient {
     }
 
     // API 키 유효성 검사
-    isApiKeyValid() {
-        return this.apiKey && this.apiKey.trim().length > 0;
+    isApiKeyValid(): boolean {
+        return this.apiKey !== null && this.apiKey.trim().length > 0;
     }
 
     // API 사용 가능 여부 확인
-    isApiAvailable() {
+    isApiAvailable(): boolean {
         const currentTime = Date.now();
         
         if (this.apiDisabled) {
@@ -65,19 +75,19 @@ export class ApiClient {
     }
 
     // 요청 간격 확인
-    canMakeRequest(requiredInterval) {
+    canMakeRequest(requiredInterval: number): boolean {
         const currentTime = Date.now();
         return currentTime - this.lastRequestTime >= requiredInterval;
     }
 
     // LLM API 호출
-    async callAPI(prompt, promptKey) {
+    async callAPI(prompt: string, promptKey: string): Promise<string> {
         if (!this.isApiAvailable()) {
             throw new Error('API를 사용할 수 없습니다');
         }
 
         const requestBody = {
-            model: "gpt-4.1-mini",
+            model: "gpt-4o-mini",
             messages: [
                 {
                     role: "system",
@@ -144,13 +154,13 @@ export class ApiClient {
         } catch (error) {
             clearTimeout(timeoutId);
             
-            if (error.name === 'AbortError') {
+            if (error instanceof Error && error.name === 'AbortError') {
                 console.warn('⏰ [API 타임아웃] 3초 초과로 요청 중단됨');
                 throw new Error('API 타임아웃 (3초 초과)');
             }
             
             // 일반 오류 처리
-            if (error.message.includes('429') || error.message.includes('Too Many Requests')) {
+            if (error instanceof Error && (error.message.includes('429') || error.message.includes('Too Many Requests'))) {
                 this.handleRateLimitError();
             }
             
@@ -159,7 +169,7 @@ export class ApiClient {
     }
 
     // Rate Limit 오류 처리
-    handleRateLimitError() {
+    private handleRateLimitError(): void {
         this.errorCount++;
         console.warn(`API 사용량 초과 오류 (${this.errorCount}/${this.maxErrors})`);
         
@@ -172,12 +182,18 @@ export class ApiClient {
     }
 
     // 오류 카운트 리셋
-    resetErrorCount() {
+    resetErrorCount(): void {
         this.errorCount = 0;
     }
 
     // API 상태 정보 반환
-    getStatus() {
+    getStatus(): {
+        isAvailable: boolean;
+        hasValidKey: boolean;
+        isDisabled: boolean;
+        errorCount: number;
+        disabledUntil: number;
+    } {
         return {
             isAvailable: this.isApiAvailable(),
             hasValidKey: this.isApiKeyValid(),

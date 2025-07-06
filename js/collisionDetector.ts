@@ -1,3 +1,7 @@
+import { CollisionResult, CollisionType } from './types.ts';
+import { Snake } from './snake.ts';
+import { AISnake } from './aiSnake.ts';
+
 // 충돌 검사 전담 클래스
 export class CollisionDetector {
     constructor() {
@@ -5,8 +9,8 @@ export class CollisionDetector {
     }
 
     // 뱀들 간의 충돌 검사
-    checkSnakeCollision(snake1, snake2) {
-        if (!snake2.isAlive) return false;
+    checkSnakeCollision(snake1: Snake, snake2: Snake | AISnake): boolean {
+        if (snake2 instanceof AISnake && !snake2.isAlive) return false;
         
         const head = snake1.body[0];
         return snake2.body.some(segment => 
@@ -15,7 +19,7 @@ export class CollisionDetector {
     }
 
     // 플레이어 뱀의 모든 충돌 검사
-    checkPlayerCollisions(playerSnake, aiSnake, canvasWidth, canvasHeight) {
+    checkPlayerCollisions(playerSnake: Snake, aiSnake: AISnake, canvasWidth: number, canvasHeight: number): CollisionResult {
         return {
             wall: playerSnake.checkWallCollision(canvasWidth, canvasHeight),
             self: playerSnake.checkSelfCollision(),
@@ -24,7 +28,7 @@ export class CollisionDetector {
     }
 
     // AI 뱀의 모든 충돌 검사
-    checkAICollisions(aiSnake, playerSnake, canvasWidth, canvasHeight) {
+    checkAICollisions(aiSnake: AISnake, playerSnake: Snake, canvasWidth: number, canvasHeight: number): CollisionResult | null {
         if (!aiSnake.isAlive) return null;
         
         return {
@@ -35,13 +39,13 @@ export class CollisionDetector {
     }
 
     // 전체 충돌 검사 결과 확인
-    hasAnyCollision(collisions) {
+    hasAnyCollision(collisions: CollisionResult | null): boolean {
         if (!collisions) return false;
         return collisions.wall || collisions.self || collisions.enemy;
     }
 
     // 충돌 유형 반환
-    getCollisionType(collisions) {
+    getCollisionType(collisions: CollisionResult | null): CollisionType | null {
         if (!collisions) return null;
         
         if (collisions.wall) return 'wall';

@@ -1,10 +1,27 @@
 export class SpeechBubble {
-    constructor(x, y, text, isAI = false, type = 'fallback') {
+    public x: number;
+    public y: number;
+    public text: string;
+    public isAI: boolean;
+    public type: 'llm' | 'fallback';
+    public life: number;
+    public maxLife: number;
+    public opacity: number;
+    public scale: number;
+    public targetScale: number;
+    public animationSpeed: number;
+    public padding: number;
+    public fontSize: number;
+    public minWidth: number;
+    public estimatedWidth: number;
+    public height: number;
+
+    constructor(x: number, y: number, text: string, isAI: boolean = false, type: 'llm' | 'fallback' = 'fallback') {
         this.x = x;
         this.y = y;
         this.text = text;
         this.isAI = isAI;
-        this.type = type; // 'llm' or 'fallback'
+        this.type = type;
         this.life = 3000; // 3초간 표시
         this.maxLife = 3000;
         this.opacity = 1.0;
@@ -20,7 +37,7 @@ export class SpeechBubble {
         this.height = this.fontSize + this.padding * 2;
     }
 
-    update(deltaTime) {
+    update(deltaTime: number): boolean {
         this.life -= deltaTime;
         
         // 스케일 애니메이션 (등장 효과)
@@ -39,7 +56,7 @@ export class SpeechBubble {
         return this.life > 0;
     }
 
-    draw(ctx) {
+    draw(ctx: CanvasRenderingContext2D): void {
         if (this.opacity <= 0) return;
         
         ctx.save();
@@ -66,7 +83,7 @@ export class SpeechBubble {
         ctx.restore();
     }
 
-    drawBubbleBackground(ctx, x, y) {
+    private drawBubbleBackground(ctx: CanvasRenderingContext2D, x: number, y: number): void {
         const borderRadius = 8;
         
         // 그림자 효과
@@ -113,7 +130,7 @@ export class SpeechBubble {
         ctx.stroke();
     }
 
-    drawBubbleTail(ctx, centerX, bubbleBottom) {
+    private drawBubbleTail(ctx: CanvasRenderingContext2D, centerX: number, bubbleBottom: number): void {
         const tailSize = 8;
         
         // 그림자
@@ -148,7 +165,7 @@ export class SpeechBubble {
         ctx.stroke();
     }
 
-    drawText(ctx, centerX, centerY) {
+    private drawText(ctx: CanvasRenderingContext2D, centerX: number, centerY: number): void {
         ctx.fillStyle = this.isAI ? '#1565C0' : '#2E7D32';
         ctx.font = `bold ${this.fontSize}px Arial`;
         ctx.textAlign = 'center';
@@ -156,7 +173,7 @@ export class SpeechBubble {
         ctx.fillText(this.text, centerX, centerY);
     }
 
-    drawRoundedRect(ctx, x, y, width, height, radius) {
+    private drawRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number): void {
         ctx.beginPath();
         ctx.moveTo(x + radius, y);
         ctx.lineTo(x + width - radius, y);
@@ -172,11 +189,13 @@ export class SpeechBubble {
 }
 
 export class SpeechBubbleManager {
+    public bubbles: SpeechBubble[];
+
     constructor() {
         this.bubbles = [];
     }
 
-    addBubble(x, y, text, isAI = false, type = 'fallback') {
+    addBubble(x: number, y: number, text: string, isAI: boolean = false, type: 'llm' | 'fallback' = 'fallback'): void {
         // 기존 말풍선 제거 (한 번에 하나만)
         this.bubbles = this.bubbles.filter(bubble => bubble.isAI !== isAI);
         
@@ -185,20 +204,20 @@ export class SpeechBubbleManager {
         this.bubbles.push(bubble);
     }
 
-    update(deltaTime) {
+    update(deltaTime: number): void {
         this.bubbles = this.bubbles.filter(bubble => bubble.update(deltaTime));
     }
 
-    draw(ctx) {
+    draw(ctx: CanvasRenderingContext2D): void {
         this.bubbles.forEach(bubble => bubble.draw(ctx));
     }
 
-    clear() {
+    clear(): void {
         this.bubbles = [];
     }
 
     // 특정 뱀의 말풍선만 제거
-    removeBubblesForSnake(isAI) {
+    removeBubblesForSnake(isAI: boolean): void {
         this.bubbles = this.bubbles.filter(bubble => bubble.isAI !== isAI);
     }
 }

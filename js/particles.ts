@@ -1,9 +1,13 @@
+import { Particle } from './types.ts';
+
 export class ParticleSystem {
+    public particles: Particle[];
+
     constructor() {
         this.particles = [];
     }
 
-    createFoodParticles(x, y, gridSize) {
+    createFoodParticles(x: number, y: number, gridSize: number): void {
         const centerX = x * gridSize + gridSize / 2;
         const centerY = y * gridSize + gridSize / 2;
         
@@ -25,7 +29,7 @@ export class ParticleSystem {
         }
     }
 
-    createScoreParticles(x, y, score) {
+    createScoreParticles(x: number, y: number, score: number): void {
         // 점수 텍스트 파티클
         this.particles.push({
             x: x,
@@ -41,7 +45,7 @@ export class ParticleSystem {
         });
     }
 
-    update() {
+    update(): void {
         this.particles = this.particles.filter(particle => {
             particle.x += particle.vx;
             particle.y += particle.vy;
@@ -57,7 +61,7 @@ export class ParticleSystem {
         });
     }
 
-    draw(ctx) {
+    draw(ctx: CanvasRenderingContext2D): void {
         this.particles.forEach(particle => {
             const alpha = particle.life / particle.maxLife;
             
@@ -68,7 +72,7 @@ export class ParticleSystem {
                 ctx.fillStyle = particle.color;
                 ctx.font = `${particle.size}px Arial`;
                 ctx.textAlign = 'center';
-                ctx.fillText(particle.text, particle.x, particle.y);
+                ctx.fillText(particle.text || '', particle.x, particle.y);
                 ctx.restore();
             } else {
                 // 일반 파티클

@@ -1,16 +1,23 @@
+import { Position, RenderPosition } from './types.js';
+
 export class Food {
-    constructor(gridSize) {
+    public gridSize: number;
+    public position: Position;
+    public animationOffset: number;
+    public pulseSpeed: number;
+
+    constructor(gridSize: number) {
         this.gridSize = gridSize;
         this.position = { x: 0, y: 0 };
         this.animationOffset = 0;
         this.pulseSpeed = 0.05;
     }
 
-    generateRandomPosition(canvasWidth, canvasHeight, snakeBody, otherFoods = []) {
+    generateRandomPosition(canvasWidth: number, canvasHeight: number, snakeBody: RenderPosition[], otherFoods: Food[] = []): void {
         const gridWidth = canvasWidth / this.gridSize;
         const gridHeight = canvasHeight / this.gridSize;
         
-        let newPosition;
+        let newPosition: Position;
         do {
             newPosition = {
                 x: Math.floor(Math.random() * gridWidth),
@@ -21,13 +28,11 @@ export class Food {
         this.position = newPosition;
     }
 
-    isPositionOccupied(position, snakeBody, otherFoods = []) {
-        // 뱀 몸체와 겹치는지 확인
+    isPositionOccupied(position: Position, snakeBody: RenderPosition[], otherFoods: Food[] = []): boolean {
         const snakeCollision = snakeBody.some(segment => 
             segment.x === position.x && segment.y === position.y
         );
         
-        // 다른 과일과 겹치는지 확인
         const foodCollision = otherFoods.some(food => 
             food.x === position.x && food.y === position.y
         );
@@ -35,16 +40,15 @@ export class Food {
         return snakeCollision || foodCollision;
     }
 
-    get x() {
+    get x(): number {
         return this.position.x;
     }
 
-    get y() {
+    get y(): number {
         return this.position.y;
     }
 
-    draw(ctx) {
-        // 애니메이션 업데이트
+    draw(ctx: CanvasRenderingContext2D): void {
         this.animationOffset += this.pulseSpeed;
         
         const x = this.position.x * this.gridSize;
@@ -53,18 +57,15 @@ export class Food {
         const centerY = y + this.gridSize / 2;
         const baseRadius = this.gridSize / 2 - 2;
         
-        // 펄스 효과 (크기 변화)
         const pulseScale = 1 + Math.sin(this.animationOffset) * 0.2;
         const radius = baseRadius * pulseScale;
         
-        // 글로우 효과 (외곽선)
         ctx.save();
         ctx.shadowColor = '#FF6B6B';
         ctx.shadowBlur = 10;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
         
-        // 메인 사과 몸체
         const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
         gradient.addColorStop(0, '#FF8A80');
         gradient.addColorStop(0.7, '#FF6B6B');
@@ -79,7 +80,6 @@ export class Food {
         ctx.fill();
         ctx.stroke();
         
-        // 하이라이트 효과
         ctx.fillStyle = '#FFCDD2';
         ctx.beginPath();
         ctx.arc(centerX - radius/3, centerY - radius/3, radius/3, 0, 2 * Math.PI);
@@ -87,13 +87,11 @@ export class Food {
         
         ctx.restore();
         
-        // 사과 잎사귀 (작은 초록색 장식)
         ctx.fillStyle = '#4CAF50';
         ctx.beginPath();
         ctx.ellipse(centerX, centerY - radius + 2, 3, 2, 0, 0, 2 * Math.PI);
         ctx.fill();
         
-        // 사과 줄기
         ctx.strokeStyle = '#8D6E63';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -104,13 +102,17 @@ export class Food {
 }
 
 export class FoodManager {
-    constructor(gridSize, count = 2) {
+    public gridSize: number;
+    public foods: Food[];
+    public maxCount: number;
+
+    constructor(gridSize: number, count: number = 2) {
         this.gridSize = gridSize;
         this.foods = [];
         this.maxCount = count;
     }
 
-    initialize(canvasWidth, canvasHeight, snakeBody) {
+    initialize(canvasWidth: number, canvasHeight: number, snakeBody: RenderPosition[]): void {
         this.foods = [];
         for (let i = 0; i < this.maxCount; i++) {
             const food = new Food(this.gridSize);
@@ -119,21 +121,21 @@ export class FoodManager {
         }
     }
 
-    checkCollision(snake) {
+    checkCollision(snake: { body: RenderPosition[] }): Food | undefined {
         const head = snake.body[0];
         return this.foods.find(food => 
             food.x === head.x && food.y === head.y
         );
     }
 
-    removeFood(foodToRemove) {
+    removeFood(foodToRemove: Food): void {
         const index = this.foods.indexOf(foodToRemove);
         if (index > -1) {
             this.foods.splice(index, 1);
         }
     }
 
-    addNewFood(canvasWidth, canvasHeight, snakeBody) {
+    addNewFood(canvasWidth: number, canvasHeight: number, snakeBody: RenderPosition[]): void {
         if (this.foods.length < this.maxCount) {
             const food = new Food(this.gridSize);
             food.generateRandomPosition(canvasWidth, canvasHeight, snakeBody, this.foods);
@@ -141,11 +143,11 @@ export class FoodManager {
         }
     }
 
-    draw(ctx) {
+    draw(ctx: CanvasRenderingContext2D): void {
         this.foods.forEach(food => food.draw(ctx));
     }
 
-    get count() {
+    get count(): number {
         return this.foods.length;
     }
 }

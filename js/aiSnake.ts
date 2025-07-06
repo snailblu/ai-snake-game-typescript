@@ -1,7 +1,16 @@
 import { Snake } from './snake.js';
+import { Direction, FoodType, GameSituation, RenderPosition } from './types.js';
 
 export class AISnake extends Snake {
-    constructor(gridSize) {
+    public isAI: boolean;
+    public lastMoveTime: number;
+    public moveInterval: number;
+    public mistakeChance: number;
+    public isAlive: boolean;
+    public respawnTimer: number;
+    public respawnDelay: number;
+
+    constructor(gridSize: number) {
         super(gridSize);
         this.isAI = true;
         this.lastMoveTime = 0;
@@ -18,7 +27,7 @@ export class AISnake extends Snake {
         this.justAte = false;
     }
 
-    reset() {
+    reset(): void {
         super.reset();
         // AI는 다른 시작 위치
         this.body = [
@@ -37,7 +46,7 @@ export class AISnake extends Snake {
     }
 
     // AI 전용 혼잣말 타이밍 체크
-    shouldChatter(currentTime, foods, otherSnake, chatter) {
+    shouldChatter(currentTime: number, foods: FoodType[], otherSnake: Snake, chatter: any): { should: boolean; situation?: GameSituation } {
         // 방금 음식을 먹었으면 즉시 혼잣말
         if (this.justAte) {
             this.justAte = false;
@@ -65,7 +74,7 @@ export class AISnake extends Snake {
     }
 
     // AI 전용 grow (혼잣말 트리거 포함)
-    grow() {
+    grow(): void {
         const tail = { ...this.body[this.body.length - 1] };
         tail.renderX = tail.x;
         tail.renderY = tail.y;
@@ -76,7 +85,7 @@ export class AISnake extends Snake {
     }
 
     // AI 업데이트 (자동 이동)
-    updateAI(currentTime, foods, playerSnake, canvasWidth, canvasHeight) {
+    updateAI(currentTime: number, foods: FoodType[], playerSnake: Snake, canvasWidth: number, canvasHeight: number): void {
         if (!this.isAlive) {
             this.respawnTimer += 16; // 대략 60fps 기준
             if (this.respawnTimer >= this.respawnDelay) {
@@ -102,7 +111,7 @@ export class AISnake extends Snake {
     }
 
     // AI 방향 결정 로직
-    decideDirection(foods, playerSnake, canvasWidth, canvasHeight) {
+    decideDirection(foods: FoodType[], playerSnake: Snake, canvasWidth: number, canvasHeight: number): Direction | null {
         // 5% 확률로 실수
         if (Math.random() < this.mistakeChance) {
             return this.getRandomDirection();
@@ -114,7 +123,7 @@ export class AISnake extends Snake {
 
         // 목표로 가는 방향 계산
         const head = this.body[0];
-        const directions = [
+        const directions: Direction[] = [
             { x: 0, y: -1 }, // 위
             { x: 1, y: 0 },  // 오른쪽
             { x: 0, y: 1 },  // 아래
@@ -156,7 +165,7 @@ export class AISnake extends Snake {
     }
 
     // 가장 가까운 음식 찾기
-    findNearestFood(foods) {
+    findNearestFood(foods: FoodType[]): FoodType | null {
         if (!foods || foods.length === 0) return null;
 
         const head = this.body[0];
@@ -175,12 +184,12 @@ export class AISnake extends Snake {
     }
 
     // 거리 계산 (맨하탄 거리)
-    getDistance(pos1, pos2) {
+    getDistance(pos1: { x: number; y: number }, pos2: { x: number; y: number }): number {
         return Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y);
     }
 
     // 안전한 위치인지 확인
-    isSafePosition(pos, playerSnake, canvasWidth, canvasHeight) {
+    isSafePosition(pos: { x: number; y: number }, playerSnake: Snake, canvasWidth: number, canvasHeight: number): boolean {
         const gridWidth = canvasWidth / this.gridSize;
         const gridHeight = canvasHeight / this.gridSize;
 
@@ -203,27 +212,27 @@ export class AISnake extends Snake {
     }
 
     // 랜덤 방향
-    getRandomDirection() {
-        const directions = [
+    getRandomDirection(): Direction {
+        const directions: Direction[] = [
             { x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }
         ];
         return directions[Math.floor(Math.random() * directions.length)];
     }
 
     // 사망 처리
-    die() {
+    die(): void {
         this.isAlive = false;
         this.respawnTimer = 0;
     }
 
     // 리스폰
-    respawn(canvasWidth, canvasHeight, playerSnake) {
+    respawn(canvasWidth: number, canvasHeight: number, playerSnake: Snake): void {
         const gridWidth = canvasWidth / this.gridSize;
         const gridHeight = canvasHeight / this.gridSize;
 
         // 안전한 위치 찾기
         let attempts = 0;
-        let startX, startY;
+        let startX: number, startY: number;
         
         do {
             startX = Math.floor(Math.random() * (gridWidth - 3)) + 1;
@@ -244,7 +253,7 @@ export class AISnake extends Snake {
         this.respawnTimer = 0;
     }
 
-    isPositionOccupied(x, y, playerSnake) {
+    isPositionOccupied(x: number, y: number, playerSnake: Snake): boolean {
         // 플레이어 뱀과 겹치는지 확인
         return playerSnake && playerSnake.body.some(segment => 
             Math.abs(segment.x - x) <= 2 && Math.abs(segment.y - y) <= 2
@@ -252,7 +261,7 @@ export class AISnake extends Snake {
     }
 
     // AI 뱀용 그리기 (파란색)
-    draw(ctx) {
+    draw(ctx: CanvasRenderingContext2D): void {
         if (!this.isAlive) return;
 
         ctx.lineWidth = 2;

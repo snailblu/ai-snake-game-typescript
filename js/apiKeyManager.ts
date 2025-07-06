@@ -1,18 +1,35 @@
+type StatusType = 'success' | 'error' | 'testing';
+
+interface ChatterInterface {
+    setApiKey(key: string | null): void;
+    testApiKey(key: string): Promise<{ message: string }>;
+}
+
+declare global {
+    interface Window {
+        game: {
+            chatterProbability: number;
+        };
+    }
+}
+
 export class ApiKeyManager {
-    constructor(chatter) {
+    private chatter: ChatterInterface;
+
+    constructor(chatter: ChatterInterface) {
         this.chatter = chatter;
         this.setupEventListeners();
         this.initializeUI();
     }
 
-    setupEventListeners() {
-        const apiKeyInput = document.getElementById('apiKey');
-        const saveButton = document.getElementById('saveApiKey');
-        const testButton = document.getElementById('testApiKey');
-        const clearButton = document.getElementById('clearApiKey');
-        const freqSlider = document.getElementById('chatterFreq');
-        const freqValue = document.getElementById('freqValue');
-        const apiStatus = document.getElementById('apiStatus');
+    private setupEventListeners(): void {
+        const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement;
+        const saveButton = document.getElementById('saveApiKey') as HTMLButtonElement;
+        const testButton = document.getElementById('testApiKey') as HTMLButtonElement;
+        const clearButton = document.getElementById('clearApiKey') as HTMLButtonElement;
+        const freqSlider = document.getElementById('chatterFreq') as HTMLInputElement;
+        const freqValue = document.getElementById('freqValue') as HTMLSpanElement;
+        const apiStatus = document.getElementById('apiStatus') as HTMLDivElement;
         
         // 저장 버튼 이벤트
         saveButton.addEventListener('click', () => this.handleSaveApiKey());
@@ -30,23 +47,23 @@ export class ApiKeyManager {
         freqSlider.addEventListener('input', (e) => this.handleFrequencyChange(e));
     }
 
-    initializeUI() {
+    private initializeUI(): void {
         this.loadSavedApiKey();
         this.loadSavedFrequency();
     }
 
-    loadSavedApiKey() {
-        const apiKeyInput = document.getElementById('apiKey');
+    private loadSavedApiKey(): void {
+        const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement;
         const savedKey = localStorage.getItem('openai_api_key');
         if (savedKey) {
             apiKeyInput.value = savedKey.substring(0, 10) + '...';
         }
     }
 
-    loadSavedFrequency() {
-        const freqSlider = document.getElementById('chatterFreq');
-        const freqValue = document.getElementById('freqValue');
-        const savedFreq = localStorage.getItem('chatter_frequency') || 30;
+    private loadSavedFrequency(): void {
+        const freqSlider = document.getElementById('chatterFreq') as HTMLInputElement;
+        const freqValue = document.getElementById('freqValue') as HTMLSpanElement;
+        const savedFreq = localStorage.getItem('chatter_frequency') || '30';
         
         freqSlider.value = savedFreq;
         freqValue.textContent = savedFreq + '%';
@@ -57,8 +74,8 @@ export class ApiKeyManager {
         }
     }
 
-    handleSaveApiKey() {
-        const apiKeyInput = document.getElementById('apiKey');
+    private handleSaveApiKey(): void {
+        const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement;
         const key = apiKeyInput.value.trim();
         
         if (key && key.length > 10) {
@@ -70,10 +87,10 @@ export class ApiKeyManager {
         }
     }
 
-    async handleTestApiKey() {
-        const apiKeyInput = document.getElementById('apiKey');
-        const testButton = document.getElementById('testApiKey');
-        const apiStatus = document.getElementById('apiStatus');
+    private async handleTestApiKey(): Promise<void> {
+        const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement;
+        const testButton = document.getElementById('testApiKey') as HTMLButtonElement;
+        const apiStatus = document.getElementById('apiStatus') as HTMLDivElement;
         const key = apiKeyInput.value.trim();
         
         if (!key || key.includes('...')) {
@@ -88,14 +105,14 @@ export class ApiKeyManager {
             const result = await this.chatter.testApiKey(key);
             this.showStatus('success', result.message);
         } catch (error) {
-            this.showStatus('error', error.message);
+            this.showStatus('error', (error as Error).message);
         } finally {
             testButton.disabled = false;
         }
     }
 
-    handleClearApiKey() {
-        const apiKeyInput = document.getElementById('apiKey');
+    private handleClearApiKey(): void {
+        const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement;
         
         this.chatter.setApiKey(null);
         apiKeyInput.value = '';
@@ -103,16 +120,16 @@ export class ApiKeyManager {
         alert('API 키가 삭제되었습니다.');
     }
 
-    handleInputFocus() {
-        const apiKeyInput = document.getElementById('apiKey');
+    private handleInputFocus(): void {
+        const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement;
         if (apiKeyInput.value.includes('...')) {
             apiKeyInput.value = '';
         }
     }
 
-    handleFrequencyChange(event) {
-        const freqValue = document.getElementById('freqValue');
-        const value = event.target.value;
+    private handleFrequencyChange(event: Event): void {
+        const freqValue = document.getElementById('freqValue') as HTMLSpanElement;
+        const value = (event.target as HTMLInputElement).value;
         
         freqValue.textContent = value + '%';
         localStorage.setItem('chatter_frequency', value);
@@ -123,14 +140,14 @@ export class ApiKeyManager {
         }
     }
 
-    showStatus(type, message) {
-        const apiStatus = document.getElementById('apiStatus');
+    private showStatus(type: StatusType, message: string): void {
+        const apiStatus = document.getElementById('apiStatus') as HTMLDivElement;
         apiStatus.className = `api-status ${type}`;
         apiStatus.textContent = message;
     }
 
-    clearStatus() {
-        const apiStatus = document.getElementById('apiStatus');
+    private clearStatus(): void {
+        const apiStatus = document.getElementById('apiStatus') as HTMLDivElement;
         apiStatus.className = '';
         apiStatus.textContent = '';
     }
