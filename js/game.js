@@ -4,6 +4,7 @@ import { FoodManager } from './food.js';
 import { ParticleSystem } from './particles.js';
 import { Chatter } from './chatter.js';
 import { SpeechBubbleManager } from './speechBubble.js';
+import { ApiKeyManager } from './apiKeyManager.js';
 
 class Game {
     constructor() {
@@ -17,6 +18,7 @@ class Game {
         this.particles = new ParticleSystem();
         this.chatter = new Chatter();
         this.speechBubbles = new SpeechBubbleManager();
+        this.apiKeyManager = new ApiKeyManager(this.chatter);
         
         this.score = 0;
         this.highScore = localStorage.getItem('snakeHighScore') || 0;
@@ -62,94 +64,8 @@ class Game {
                     break;
             }
         });
-        
-        // API 키 설정 이벤트 리스너
-        this.setupApiKeyListeners();
     }
 
-    setupApiKeyListeners() {
-        const apiKeyInput = document.getElementById('apiKey');
-        const saveButton = document.getElementById('saveApiKey');
-        const testButton = document.getElementById('testApiKey');
-        const clearButton = document.getElementById('clearApiKey');
-        const freqSlider = document.getElementById('chatterFreq');
-        const freqValue = document.getElementById('freqValue');
-        const apiStatus = document.getElementById('apiStatus');
-        
-        // 저장된 API 키 로드 (마스킹하여 표시)
-        const savedKey = localStorage.getItem('openai_api_key');
-        if (savedKey) {
-            apiKeyInput.value = savedKey.substring(0, 10) + '...';
-        }
-        
-        // 저장된 혼잣말 빈도 로드
-        const savedFreq = localStorage.getItem('chatter_frequency') || 30;
-        freqSlider.value = savedFreq;
-        freqValue.textContent = savedFreq + '%';
-        this.chatterProbability = parseFloat(savedFreq) / 100;
-        
-        // 저장 버튼
-        saveButton.addEventListener('click', () => {
-            const key = apiKeyInput.value.trim();
-            if (key && key.length > 10) {
-                this.chatter.setApiKey(key);
-                apiKeyInput.value = key.substring(0, 10) + '...';
-                alert('API 키가 저장되었습니다.');
-            } else {
-                alert('유효한 API 키를 입력해주세요.');
-            }
-        });
-        
-        // 테스트 버튼
-        testButton.addEventListener('click', async () => {
-            const key = apiKeyInput.value.trim();
-            if (!key || key.includes('...')) {
-                apiStatus.className = 'api-status error';
-                apiStatus.textContent = 'API 키를 입력해주세요.';
-                return;
-            }
-
-            // 테스트 중 상태
-            apiStatus.className = 'api-status testing';
-            apiStatus.textContent = 'API 키 테스트 중...';
-            testButton.disabled = true;
-
-            try {
-                const result = await this.chatter.testApiKey(key);
-                apiStatus.className = 'api-status success';
-                apiStatus.textContent = result.message;
-            } catch (error) {
-                apiStatus.className = 'api-status error';
-                apiStatus.textContent = error.message;
-            } finally {
-                testButton.disabled = false;
-            }
-        });
-
-        // 삭제 버튼
-        clearButton.addEventListener('click', () => {
-            this.chatter.setApiKey(null);
-            apiKeyInput.value = '';
-            apiStatus.className = '';
-            apiStatus.textContent = '';
-            alert('API 키가 삭제되었습니다.');
-        });
-        
-        // 입력 필드 클릭 시 전체 선택
-        apiKeyInput.addEventListener('focus', () => {
-            if (apiKeyInput.value.includes('...')) {
-                apiKeyInput.value = '';
-            }
-        });
-        
-        // 혼잣말 빈도 슬라이더
-        freqSlider.addEventListener('input', () => {
-            const value = freqSlider.value;
-            freqValue.textContent = value + '%';
-            this.chatterProbability = parseFloat(value) / 100;
-            localStorage.setItem('chatter_frequency', value);
-        });
-    }
 
     toggleGame() {
         if (this.gameRunning) {
