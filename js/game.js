@@ -1,4 +1,5 @@
 import { Snake } from './snake.js';
+import { AISnake } from './aiSnake.js';
 import { FoodManager } from './food.js';
 import { ParticleSystem } from './particles.js';
 
@@ -9,6 +10,7 @@ class Game {
         this.gridSize = 20;
         
         this.snake = new Snake(this.gridSize);
+        this.aiSnake = new AISnake(this.gridSize);
         this.foodManager = new FoodManager(this.gridSize, 2);
         this.particles = new ParticleSystem();
         
@@ -88,6 +90,13 @@ class Game {
             
             this.particles.update();
             this.snake.updateAnimation(animationSpeed);
+            this.aiSnake.updateAnimation(animationSpeed);
+            
+            // AI 뱀 업데이트 (게임이 실행 중일 때만)
+            if (this.gameRunning) {
+                this.aiSnake.updateAI(currentTime, this.foodManager.foods, this.snake, this.canvas.width, this.canvas.height);
+            }
+            
             this.draw();
             this.renderLoop = requestAnimationFrame(render);
         };
@@ -105,30 +114,72 @@ class Game {
     update() {
         this.snake.move();
         
+        // 플레이어 뱀 충돌 검사
         if (this.snake.checkWallCollision(this.canvas.width, this.canvas.height) || 
-            this.snake.checkSelfCollision()) {
+            this.snake.checkSelfCollision() || this.checkSnakeCollision(this.snake, this.aiSnake)) {
             this.gameOver();
             return;
         }
         
-        const eatenFood = this.foodManager.checkCollision(this.snake);
-        if (eatenFood) {
-            // 파티클 효과 생성
-            this.particles.createFoodParticles(eatenFood.x, eatenFood.y, this.gridSize);
+        // AI 뱀 충돌 검사
+        if (this.aiSnake.isAlive && (
+            this.aiSnake.checkWallCollision(this.canvas.width, this.canvas.height) || 
+            this.aiSnake.checkSelfCollision() || this.checkSnakeCollision(this.aiSnake, this.snake))) {
+            this.aiSnake.die();
+            // AI 뱀 사망 파티클 효과
+            this.particles.createFoodParticles(
+                this.aiSnake.body[0].x, 
+                this.aiSnake.body[0].y, 
+                this.gridSize
+            );
+        }
+        
+        // 플레이어 뱀 음식 충돌
+        const playerEatenFood = this.foodManager.checkCollision(this.snake);
+        if (playerEatenFood) {
+            this.handleFoodEaten(playerEatenFood, true);
+        }
+        
+        // AI 뱀 음식 충돌
+        if (this.aiSnake.isAlive) {
+            const aiEatenFood = this.foodManager.checkCollision(this.aiSnake);
+            if (aiEatenFood) {
+                this.handleFoodEaten(aiEatenFood, false);
+            }
+        }
+    }
+
+    // 뱀들 간의 충돌 검사
+    checkSnakeCollision(snake1, snake2) {
+        if (!snake2.isAlive) return false;
+        
+        const head = snake1.body[0];
+        return snake2.body.some(segment => 
+            segment.x === head.x && segment.y === head.y
+        );
+    }
+
+    // 음식 섭취 처리
+    handleFoodEaten(eatenFood, isPlayer) {
+        // 파티클 효과 생성
+        this.particles.createFoodParticles(eatenFood.x, eatenFood.y, this.gridSize);
+        
+        if (isPlayer) {
             this.particles.createScoreParticles(
                 eatenFood.x * this.gridSize + this.gridSize / 2,
                 eatenFood.y * this.gridSize,
                 10
             );
-            
             this.snake.grow();
             this.score += 10;
             this.updateScore();
-            
-            // 먹은 과일 제거하고 새 과일 추가
-            this.foodManager.removeFood(eatenFood);
-            this.foodManager.addNewFood(this.canvas.width, this.canvas.height, this.snake.body);
+        } else {
+            this.aiSnake.grow();
         }
+        
+        // 먹은 과일 제거하고 새 과일 추가
+        this.foodManager.removeFood(eatenFood);
+        this.foodManager.addNewFood(this.canvas.width, this.canvas.height, this.snake.body);
     }
 
     draw() {
@@ -143,6 +194,7 @@ class Game {
         this.drawGrid();
         
         this.snake.draw(this.ctx);
+        this.aiSnake.draw(this.ctx);
         this.foodManager.draw(this.ctx);
         this.particles.draw(this.ctx);
     }
@@ -194,6 +246,7 @@ class Game {
         this.score = 0;
         this.updateScore();
         this.snake.reset();
+        this.aiSnake.reset();
         this.foodManager.initialize(this.canvas.width, this.canvas.height, this.snake.body);
         this.draw();
         this.gameRunning = false;
