@@ -52,3 +52,12 @@ temp/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Build output
+dist/
+
+# Claude settings (contains local configs)
+.claude/
+
+# TypeScript compiled files
+*.tsbuildinfo
